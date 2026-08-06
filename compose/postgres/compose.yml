@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+
+    container_name: autilux-postgres
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: autilux
+      POSTGRES_USER: autilux
+      POSTGRES_PASSWORD: 3OVl1976Z8WO
+
+    volumes:
+      - /opt/autilux/data/postgres:/var/lib/postgresql/data
+
+    networks:
+      - autilux
+
+networks:
+  autilux:
+    external: true
