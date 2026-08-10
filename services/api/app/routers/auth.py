@@ -57,3 +57,13 @@ def login(
         "access_token": token,
         "token_type": "bearer",
     }
+from app.core.security import (
+    create_access_token,
+    get_current_username,
+    verify_password,
+)
+@router.get("/me")
+def me(username: str = Depends(get_current_username)):
+    return {
+        "username": username,
+    }
