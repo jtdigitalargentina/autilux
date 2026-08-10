@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.core.security import (
     create_access_token,
+    get_current_username,
     verify_password,
 )
 from app.crud.users import get_by_username
 from app.db.session import get_db
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import LoginRequest, UserMe
+
 
 router = APIRouter(
     prefix="/auth",
@@ -57,13 +59,36 @@ def login(
         "access_token": token,
         "token_type": "bearer",
     }
-from app.core.security import (
-    create_access_token,
-    get_current_username,
-    verify_password,
+
+
+@router.get(
+    "/me",
+    response_model=UserMe,
 )
-@router.get("/me")
-def me(username: str = Depends(get_current_username)):
+def me(
+    username: str = Depends(get_current_username),
+    db: Session = Depends(get_db),
+):
+    user = get_by_username(
+        db,
+        username,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="User not found",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="User inactive",
+        )
+
     return {
-        "username": username,
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_active": user.is_active,
     }

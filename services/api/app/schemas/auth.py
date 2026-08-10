@@ -9,3 +9,10 @@ class LoginRequest(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserMe(BaseModel):
+    id: int
+    username: str
+    email: str
+    is_active: bool
