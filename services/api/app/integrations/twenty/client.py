@@ -56,6 +56,17 @@ class TwentyClient:
             f"/rest/people?limit={limit}",
         )
 
+    def list_companies(self, limit: int = 10):
+        return self._request(
+            "GET",
+            f"/rest/companies?limit={limit}",
+        )
+
+    def list_opportunities(self, limit: int = 10):
+        return self._request(
+            "GET",
+            f"/rest/opportunities?limit={limit}",
+        )
+
 
 twenty_client = TwentyClient()
-

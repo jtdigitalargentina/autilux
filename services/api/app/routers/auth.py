@@ -10,7 +10,8 @@ from app.core.security import (
 )
 from app.crud.users import get_by_username
 from app.db.session import get_db
-from app.schemas.auth import LoginRequest, UserMe
+from app.schemas.auth import LoginRequest
+from app.schemas.user import UserMe
 
 
 router = APIRouter(

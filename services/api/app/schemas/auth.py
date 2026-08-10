@@ -11,8 +11,3 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-class UserMe(BaseModel):
-    id: int
-    username: str
-    email: str
-    is_active: bool
