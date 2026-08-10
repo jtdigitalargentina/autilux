@@ -1,34 +1,55 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from app.schemas.auth import LoginRequest
 from app.core.security import (
     create_access_token,
     verify_password,
 )
+from app.crud.users import get_by_username
+from app.db.session import get_db
+from app.schemas.auth import LoginRequest
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-# Usuario temporal para desarrollo
-FAKE_USER = {
-    "username": "admin",
-    # contraseña: admin123
-    "password_hash": "$2b$12$NNdIUsfgxdAwmMNP0opYnOJn98qYVt0bUwzqfYrs9/wUyfl2Pczxy",
-}
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"],
+)
 
 
 @router.post("/login")
-def login(data: LoginRequest):
+def login(
+    data: LoginRequest,
+    db: Session = Depends(get_db),
+):
+    user = get_by_username(
+        db,
+        data.username,
+    )
 
-    if data.username != FAKE_USER["username"]:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+        )
 
-    if not verify_password(data.password, FAKE_USER["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="User inactive",
+        )
+
+    if not verify_password(
+        data.password,
+        user.password_hash,
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+        )
 
     token = create_access_token(
-        {"sub": data.username},
+        {"sub": user.username},
         expires_delta=timedelta(minutes=60),
     )
 
