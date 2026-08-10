@@ -33,3 +33,4 @@ compose/traefik/letsencrypt/acme.json
 
 # Sistema
 .DS_Store
+/compose/langfuse/source/

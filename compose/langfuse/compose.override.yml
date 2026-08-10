@@ -1,0 +1,48 @@
+services:
+  langfuse-web:
+    ports: !override []
+    environment:
+      HOSTNAME: 0.0.0.0
+      REDIS_HOST: langfuse-redis
+      LANGFUSE_MIGRATION_V4_NATIVE_OTEL_BEHAVIOUR: direct
+    networks:
+      - default
+      - autilux
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=autilux
+      - traefik.http.routers.langfuse.rule=Host(`langfuse.autilux.com`)
+      - traefik.http.routers.langfuse.entrypoints=websecure
+      - traefik.http.routers.langfuse.tls=true
+      - traefik.http.routers.langfuse.tls.certresolver=letsencrypt
+      - traefik.http.services.langfuse.loadbalancer.server.port=3000
+
+  langfuse-worker:
+    ports: !override []
+    environment:
+      REDIS_HOST: langfuse-redis
+      LANGFUSE_MIGRATION_V4_NATIVE_OTEL_BEHAVIOUR: direct
+
+  clickhouse:
+    ports: !override []
+
+  minio:
+    ports: !override []
+
+  redis:
+    ports: !override []
+    networks:
+      default:
+        aliases:
+          - langfuse-redis
+
+  postgres:
+    ports: !override []
+    networks:
+      default:
+        aliases:
+          - langfuse-postgres
+
+networks:
+  autilux:
+    external: true
