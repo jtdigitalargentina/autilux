@@ -2,14 +2,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = (
-    "postgresql+psycopg://"
-    "autilux:3OVl1976Z8WO"
-    "@autilux-postgres:5432/autilux"
-)
+from app.core.settings import settings
+
 
 engine = create_engine(
-    DATABASE_URL,
+    settings.DATABASE_URL,
     echo=True,
 )
 
