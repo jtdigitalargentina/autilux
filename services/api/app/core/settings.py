@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str = ""
     KIMI_API_KEY: str = ""
+    KIMI_BASE_URL: str = "https://api.moonshot.ai/v1"
+    KIMI_MODEL: str = "kimi-k2.6"
 
     class Config:
         env_file = ".env"
