@@ -2,6 +2,7 @@ import json
 import urllib.error
 import urllib.request
 from typing import Any
+from langfuse import get_client
 
 from app.core.settings import settings
 
@@ -67,19 +68,54 @@ def research_company(input_data: dict[str, Any] | None) -> dict[str, Any]:
         },
     )
 
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload = json.load(response)
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Kimi HTTP {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Kimi connection failed: {exc.reason}") from exc
+    langfuse = get_client()
 
-    result = _parse_json(payload["choices"][0]["message"]["content"])
-    result["_runtime"] = {
-        "provider": "kimi",
-        "model": payload.get("model", settings.KIMI_MODEL),
-        "usage": payload.get("usage", {}),
-    }
-    return result
+    with langfuse.start_as_current_observation(
+        as_type="generation",
+        name="kimi-company-research",
+        model=settings.KIMI_MODEL,
+        input={
+            "system_prompt": SYSTEM_PROMPT,
+            "input_data": input_data,
+        },
+        model_parameters={
+            "max_tokens": 4000,
+            "response_format": "json_object",
+        },
+    ) as generation:
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                payload = json.load(response)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Kimi HTTP {exc.code}: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Kimi connection failed: {exc.reason}") from exc
+
+        message = payload["choices"][0]["message"]
+        usage = payload.get("usage", {})
+        completion_details = usage.get("completion_tokens_details") or {}
+
+        generation.update(
+            output=message.get("content"),
+            model=payload.get("model", settings.KIMI_MODEL),
+            usage_details={
+                "input": int(usage.get("prompt_tokens") or 0),
+                "output": int(usage.get("completion_tokens") or 0),
+                "total": int(usage.get("total_tokens") or 0),
+            },
+            metadata={
+                "provider": "kimi",
+                "reasoning_tokens": int(
+                    completion_details.get("reasoning_tokens") or 0
+                ),
+            },
+        )
+
+        result = _parse_json(message.get("content") or "")
+        result["_runtime"] = {
+            "provider": "kimi",
+            "model": payload.get("model", settings.KIMI_MODEL),
+            "usage": usage,
+        }
+        return result
