@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urldefrag, urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -177,6 +177,8 @@ def collect_browser_research(
                         href = str(
                             link.get("href") or ""
                         ).strip()
+
+                        href = urldefrag(href).url
 
                         text = str(
                             link.get("text") or ""

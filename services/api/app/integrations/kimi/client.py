@@ -31,6 +31,10 @@ Reglas importantes:
 4. Si una conclusión es una hipótesis o inferencia, indicá explícitamente que lo es.
 5. Si existe una URL asociada a una evidencia relevante, conservála como source_url.
 6. Si no hay evidencia suficiente, bajá el score y enumerá la información faltante.
+7. infrastructure_signal se refiere específicamente a infraestructura vinculada a carga de vehículos eléctricos: cargadores, estaciones de carga, potencia eléctrica disponible, instalaciones eléctricas o infraestructura equivalente. Plantas, depósitos, hubs, sucursales o superficie operativa por sí solos NO confirman infrastructure_signal.
+8. Una señal de infrastructure con confidence=confirmed requiere evidencia explícita de infraestructura de carga eléctrica o capacidad eléctrica directamente relevante para cargar vehículos.
+9. source_url debe contener únicamente la URL original en texto plano. No uses Markdown, corchetes ni enlaces formateados.
+10. No agregues calificativos que la evidencia no confirme. Por ejemplo, si la fuente dice '4.166 vehículos', no afirmes 'vehículos propios', 'alquilados' o 'tercerizados' salvo que eso aparezca explícitamente en la evidencia.
 
 Respondé exclusivamente con un objeto JSON válido con esta estructura:
 
@@ -73,6 +77,14 @@ fit debe ser:
 - HOT
 
 score debe estar entre 0 y 100.
+
+La respuesta debe ser concisa:
+- máximo 5 reasons
+- máximo 5 signals
+- máximo 4 hypotheses
+- máximo 6 missing_information
+- cada texto debe ser breve y directo
+- no repitas la misma evidencia en distintas secciones
 """.strip()
 
 
@@ -122,7 +134,7 @@ def research_company(
                     ),
                 },
             ],
-            "max_tokens": 4000,
+            "max_tokens": 6000,
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -147,7 +159,7 @@ def research_company(
             "research_payload": research_payload,
         },
         model_parameters={
-            "max_tokens": 4000,
+            "max_tokens": 6000,
             "response_format": "json_object",
         },
     ) as generation:
@@ -210,6 +222,14 @@ def research_company(
         result = _parse_json(
             message.get("content") or ""
         )
+
+        for signal in result.get("signals") or []:
+            source_url = str(signal.get("source_url") or "").strip()
+
+            if source_url.startswith("[") and "](" in source_url and source_url.endswith(")"):
+                source_url = source_url.split("](", 1)[1][:-1]
+
+            signal["source_url"] = source_url
 
         result["_runtime"] = {
             "provider": "kimi",

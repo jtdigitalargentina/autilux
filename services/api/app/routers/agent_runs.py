@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_username
 from app.integrations.kimi.client import research_company
 from app.research.company_collector import collect_company_evidence
+from app.research.evidence_extractor import extract_company_evidence
 from app.integrations.twenty.sync import sync_company_research
 from app.db.session import get_db
 from app.models.agent import Agent
@@ -77,7 +78,31 @@ def create_agent_run(
 
                 evidence = None
                 if website:
-                    evidence = collect_company_evidence(website)
+                    collected = collect_company_evidence(website)
+
+                    with langfuse.start_as_current_observation(
+                        as_type="tool",
+                        name="evidence-extractor",
+                        input={"website": website},
+                    ) as evidence_observation:
+                        evidence = extract_company_evidence(collected)
+
+                        retried = False
+
+                        if evidence.get("items_count", 0) == 0:
+                            retried = True
+                            collected = collect_company_evidence(website)
+                            evidence = extract_company_evidence(collected)
+
+                        evidence_observation.update(
+                            output={
+                                "source": evidence.get("source"),
+                                "items_count": evidence.get("items_count"),
+                                "source_pages": evidence.get("source_pages"),
+                                "evidence_chars": evidence.get("evidence_chars"),
+                                "retried": retried,
+                            }
+                        )
 
                 output = research_company(
                     input_data,
