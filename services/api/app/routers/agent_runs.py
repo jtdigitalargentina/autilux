@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_username
 from app.integrations.kimi.client import research_company
+from app.research.company_collector import collect_company_evidence
+from app.integrations.twenty.sync import sync_company_research
 from app.db.session import get_db
 from app.models.agent import Agent
 from app.models.agent_run import AgentRun
@@ -70,7 +72,29 @@ def create_agent_run(
             },
         ) as observation:
             if agent.name == "company-research":
-                output = research_company(payload.input_data)
+                input_data = payload.input_data or {}
+                website = input_data.get("website")
+
+                evidence = None
+                if website:
+                    evidence = collect_company_evidence(website)
+
+                output = research_company(
+                    input_data,
+                    evidence=evidence,
+                )
+                with langfuse.start_as_current_observation(
+                    as_type="tool",
+                    name="twenty-company-sync",
+                    input={
+                        "company_name": (payload.input_data or {}).get("company_name"),
+                        "score": output.get("score"),
+                        "fit": output.get("fit"),
+                    },
+                ) as crm_observation:
+                    crm_result = sync_company_research(payload.input_data, output)
+                    crm_observation.update(output=crm_result)
+                output["_crm"] = crm_result
             else:
                 output = {
                     "message": "Agent runtime executed successfully",

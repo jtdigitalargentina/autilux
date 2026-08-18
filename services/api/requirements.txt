@@ -12,3 +12,6 @@ psycopg[binary]==3.2.9
 email-validator
 
 langfuse>=4,<5
+httpx==0.28.1
+beautifulsoup4==4.13.4
+playwright
